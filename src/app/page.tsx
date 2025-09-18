@@ -282,6 +282,9 @@ export default function Page() {
 
             {/* 第4文型（SVOO） */}
             <option value="4">Unit4 第4文型（SVOO）</option>
+
+            {/* 第5文型（SVOO） */}
+            <option value="5">Unit5 第5文型（SVOC）</option>
             </select>
           </div>
 
