@@ -174,7 +174,7 @@ export const baseDrills: Drill[] = [
   { id: '5-50', unit: '5', focus: '5.5 p.p. (leave/want)',      jp: '彼は窓を閉めた状態にしておき、私は報告書を正午までに仕上げてほしい。', en: 'He left the window closed, and I want the report finished by noon.' },
 
   // 5.6 being + 過去分詞（進行している受け身の状況：O が C されているところ）
-  { id: '5-51', unit: '5', focus: '5.6 being + p.p. (see)',     jp: '彼女は盲導犬に導かれている視覚障害者を見た。', en: 'She saw a visually impaired man being led by a guide dog.' },
+  { id: '5-51', unit: '5', focus: '5.6 being + p.p. (see)',     jp: '彼女は猫が犬に追いかけられているところを見た。', en: 'She saw a cat being chased by a dog.' },
   { id: '5-52', unit: '5', focus: '5.6 being + p.p. (watch)',   jp: '私たちは古い橋が修理されているところを見守った。', en: 'We watched the old bridge being repaired.' },
   { id: '5-53', unit: '5', focus: '5.6 being + p.p. (notice)',  jp: '彼は壁が塗り替えられているのに気づいた。',     en: 'He noticed the walls being repainted.' },
   { id: '5-54', unit: '5', focus: '5.6 being + p.p. (hear)',    jp: '私は廊下で自分の名前が呼ばれているのを聞いた。', en: 'I heard my name being called in the hallway.' },
