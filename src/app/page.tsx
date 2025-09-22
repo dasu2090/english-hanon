@@ -2,12 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { baseDrills, type Drill, type Unit } from '@/data/drills';
+import { unitNotes, subNotes } from '@/data/notes';
 
 /** ===========================================
- * Hanon Typing – Next.js App Router 安定版
- * - drills を正規化（undefined を除去）
- * - availableSubunits / filtered で参照ガード
- * - ブラインド表示トグル / サブユニット絞り込み
+ * Hanon Typing – Next.js App Router
+ * - drills 正規化（undefined混入対策）
+ * - 目標文のブラインド表示（デフォルトOFF = 非表示）
+ * - ユニット選択 + サブユニット(4.x/5.x)ドロップダウン
+ * - 文法の解説（ユニット/サブユニット）
+ * - 採点ハイライト / WPM / 正確性 / 経過時間 / TTS / ショートカット
  * =========================================== */
 
 const storageKey = (k: string) => `hanon-typing:${k}`;
@@ -61,9 +64,7 @@ export default function Page() {
 
   // ── データ（正規化して保持：falsy を除去）
   const [drills] = useState<Drill[]>(() =>
-    Array.isArray(baseDrills)
-      ? (baseDrills.filter(Boolean) as Drill[])
-      : []
+    Array.isArray(baseDrills) ? (baseDrills.filter(Boolean) as Drill[]) : []
   );
 
   // ── 設定ステート（初期値固定→後で復元）
@@ -71,7 +72,8 @@ export default function Page() {
   const [subFilter, setSubFilter] = useState<'all' | string>('all');
   const [shuffle, setShuffle] = useState<boolean>(false);
   const [ignoreCase, setIgnoreCase] = useState<boolean>(false);
-  const [showTarget, setShowTarget] = useState<boolean>(false);
+  const [showTarget, setShowTarget] = useState<boolean>(false); // ← デフォルト非表示
+  const [showNotes, setShowNotes] = useState<boolean>(true);
 
   // ── サブユニット候補（focus 先頭の "4.x" / "5.x" を抽出）
   const subunitRegex = /^(\d+\.\d+)/;
@@ -79,7 +81,7 @@ export default function Page() {
     if (unitFilter === 'all') return [];
     const set = new Set<string>();
     for (const d of drills) {
-      if (!d) continue; // ← 参照ガード
+      if (!d) continue;
       if (d.unit === unitFilter) {
         const m = d.focus?.match(subunitRegex);
         if (m) set.add(m[1]);
@@ -92,19 +94,17 @@ export default function Page() {
 
   // ── フィルタ済みリスト
   const filtered = useMemo(() => {
-    // falsy 除去
     let list = (unitFilter === 'all'
       ? drills
       : drills.filter((d) => d && d.unit === unitFilter)
     ).filter(Boolean) as Drill[];
 
-    // サブフィルタ
     if (availableSubunits.length && subFilter !== 'all') {
       list = list.filter((d) => d.focus?.startsWith(subFilter));
     }
 
     if (!shuffle) return list;
-    // 簡易シャッフル（安定性重視ならランダム化に変更可）
+    // 簡易シャッフル（順序反転）
     return [...list].sort((a, b) => (a.id < b.id ? 1 : -1));
   }, [drills, unitFilter, shuffle, availableSubunits.length, subFilter]);
 
@@ -116,14 +116,21 @@ export default function Page() {
     if (!isBrowser) return;
     const uf = localStorage.getItem(storageKey('unitFilter'));
     if (uf) setUnitFilter(uf as any);
+
     const sf = localStorage.getItem(storageKey('subFilter'));
     if (sf) setSubFilter(sf);
+
     const sh = localStorage.getItem(storageKey('shuffle'));
     if (sh != null) setShuffle(JSON.parse(sh));
+
     const ic = localStorage.getItem(storageKey('ignoreCase'));
     if (ic != null) setIgnoreCase(JSON.parse(ic));
+
     const st = localStorage.getItem(storageKey('showTarget'));
-    if (st != null) setShowTarget(JSON.parse(st));
+    setShowTarget(st != null ? JSON.parse(st) : false); // 既定は非表示
+
+    const sn = localStorage.getItem(storageKey('showNotes'));
+    if (sn != null) setShowNotes(JSON.parse(sn));
   }, [isBrowser]);
 
   // ── filtered が確定してから index 復元/補正
@@ -167,6 +174,10 @@ export default function Page() {
     if (!isBrowser) return;
     localStorage.setItem(storageKey('showTarget'), JSON.stringify(showTarget));
   }, [showTarget, isBrowser]);
+  useEffect(() => {
+    if (!isBrowser) return;
+    localStorage.setItem(storageKey('showNotes'), JSON.stringify(showNotes));
+  }, [showNotes, isBrowser]);
   useEffect(() => {
     if (!isBrowser) return;
     localStorage.setItem(storageKey('index'), String(index));
@@ -273,6 +284,13 @@ export default function Page() {
     [targetRaw, typed, ignoreCase]
   );
 
+  // ── 解説テキスト決定（サブ優先→ユニット→なし）
+  const noteText = useMemo(() => {
+    if (subFilter !== 'all') return subNotes[subFilter] ?? '';
+    if (unitFilter !== 'all') return unitNotes[unitFilter] ?? '';
+    return '';
+  }, [subFilter, unitFilter]);
+
   // ── レンダリング
   if (!current) {
     return (
@@ -318,6 +336,15 @@ export default function Page() {
                 onChange={(e) => setShowTarget(!e.target.checked)}
               />
               解答を隠す
+            </label>
+            <label className="text-sm flex items-center gap-1">
+              <input
+                type="checkbox"
+                className="accent-blue-600"
+                checked={showNotes}
+                onChange={(e) => setShowNotes(e.target.checked)}
+              />
+              解説
             </label>
           </div>
         </header>
@@ -376,6 +403,30 @@ export default function Page() {
             </div>
           )}
         </div>
+
+        {/* Grammar Notes */}
+        {noteText && showNotes && (
+          <div className="rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 p-4 mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold">
+                文法の解説（
+                {subFilter !== 'all'
+                  ? `Unit${subFilter}`
+                  : unitFilter !== 'all'
+                  ? `Unit${unitFilter}`
+                  : '未選択'}
+                ）
+              </h3>
+              <button
+                className="text-xs underline hover:no-underline"
+                onClick={() => setShowNotes(false)}
+              >
+                非表示にする
+              </button>
+            </div>
+            <pre className="whitespace-pre-wrap text-sm leading-6">{noteText}</pre>
+          </div>
+        )}
 
         {/* Card */}
         <div className="rounded-2xl bg-white shadow p-5 mb-4">
